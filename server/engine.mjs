@@ -1,3 +1,4 @@
+import { spotifyLink, artworkLink } from './provider-validation.mjs';
 export const defaults = () => ({
   settings: {
     enabled: true,
@@ -71,8 +72,8 @@ export function normalizePlayback(raw) {
       item.show?.name ||
       'Spotify',
     album: item.album?.name || item.show?.name || '',
-    image: (item.album?.images || item.images)?.[0]?.url || '',
-    url: item.external_urls?.spotify || 'https://open.spotify.com',
+    image: artworkLink((item.album?.images || item.images)?.[0]?.url),
+    url: spotifyLink(item.external_urls?.spotify),
     playing: Boolean(raw.is_playing),
     progress: raw.progress_ms || 0,
     duration: item.duration_ms || 1,

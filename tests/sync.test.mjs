@@ -89,6 +89,13 @@ async function fixture(t, { connected = true, expires = false } = {}) {
   const fetcher = async (url, options) => {
     if (url.includes('/api/token')) {
       refreshes++;
+      if (mode === 'refresh-limited')
+        return Response.json(
+          {},
+          { status: 429, headers: { 'retry-after': '120' } },
+        );
+      if (mode === 'bad-token')
+        return Response.json({ access_token: 'bad token', expires_in: '3600' });
       return Response.json({
         access_token: 'fresh-access',
         refresh_token: 'fresh-refresh',
@@ -467,4 +474,38 @@ test('Slack launch expires, is single-use, and localhost cannot read app state',
       .location,
     /error=/,
   );
+});
+
+test('Spotify refresh honors backoff and does not replace credentials with malformed responses', async (t) => {
+  const f = await fixture(t, { expires: true });
+  f.mode('refresh-limited');
+  await f.service.tick();
+  assert.equal(f.refreshes(), 1);
+  f.advance(15000);
+  await f.service.tick();
+  assert.equal(f.refreshes(), 1);
+  f.advance(120000);
+  f.mode('bad-token');
+  await f.service.tick();
+  assert.match(f.service.publicState().error, /invalid token response/);
+  const saved = JSON.parse(readFileSync(join(f.dataDir, 'state.json')));
+  assert.equal(saved.spotify.tokens.access_token, 'fake-access');
+  assert.equal(f.posts.length, 0);
+  f.mode('playing');
+  f.advance(15000);
+  await f.service.tick();
+  assert.equal(f.posts.at(-1).status_text, 'Test track — Test artist');
+});
+
+test('playback links never expose executable or credential-bearing URLs', () => {
+  const playback = normalizePlayback({
+    ...playing,
+    item: {
+      ...playing.item,
+      external_urls: { spotify: 'javascript:alert(1)' },
+      album: { images: [{ url: 'http://untrusted.test/image' }] },
+    },
+  });
+  assert.equal(playback.url, 'https://open.spotify.com');
+  assert.equal(playback.image, '');
 });

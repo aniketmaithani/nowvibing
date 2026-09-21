@@ -1,6 +1,12 @@
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { createStateStore } from './state-store.mjs';
 import { readJsonBody, requestUrl } from './http.mjs';
+import {
+  validAccessToken,
+  validLifetime,
+  safeProviderCode,
+  retryDelay,
+} from './provider-validation.mjs';
 import { resolve } from 'node:path';
 import {
   defaults,
@@ -57,14 +63,13 @@ export function createService({
       body: new URLSearchParams(body),
     });
     if (res.status === 429) {
-      slackAfter =
-        now() + (Number(res.headers.get('retry-after')) || 60) * 1000;
+      slackAfter = now() + retryDelay(res.headers.get('retry-after'));
       throw new Error('Slack rate limit reached. Wait before reconnecting.');
     }
     const result = await res.json();
     if (!res.ok || !result.ok)
       throw new Error(
-        `Slack authorization failed (${result.error || res.status}). Reconnect Slack.`,
+        `Slack authorization failed (${safeProviderCode(result.error) || res.status}). Reconnect Slack.`,
       );
     return result;
   }
@@ -84,9 +89,9 @@ export function createService({
       ? result.authed_user
       : result;
     if (
-      !tokens.access_token ||
-      !tokens.refresh_token ||
-      !tokens.expires_in ||
+      !validAccessToken(tokens.access_token) ||
+      !validAccessToken(tokens.refresh_token) ||
+      !validLifetime(tokens.expires_in) ||
       tokens.token_type !== 'user'
     )
       throw new Error(
@@ -132,6 +137,12 @@ export function createService({
         client_id: store.spotify.clientId,
       }),
     });
+    if (res.status === 429) {
+      spotifyAfter = now() + retryDelay(res.headers.get('retry-after'));
+      throw new Error(
+        'Spotify authorization rate limit reached. Waiting before retrying.',
+      );
+    }
     const result = await res.json();
     if (!res.ok) {
       if (res.status === 400 || res.status === 401) {
@@ -140,6 +151,16 @@ export function createService({
       }
       throw new Error(
         'Spotify authorization expired or could not refresh. Reconnect Spotify.',
+      );
+    }
+    if (
+      !validAccessToken(result.access_token) ||
+      !validLifetime(result.expires_in) ||
+      (result.refresh_token !== undefined &&
+        !validAccessToken(result.refresh_token))
+    ) {
+      throw new Error(
+        'Spotify returned an invalid token response. Reconnect Spotify.',
       );
     }
     store.spotify.tokens = {
@@ -205,14 +226,13 @@ export function createService({
       body: JSON.stringify(body),
     });
     if (res.status === 429) {
-      slackAfter =
-        now() + (Number(res.headers.get('retry-after')) || 60) * 1000;
+      slackAfter = now() + retryDelay(res.headers.get('retry-after'));
       throw new Error('Slack rate limit reached. Waiting before retrying.');
     }
     const result = await res.json();
     if (!res.ok || !result.ok)
       throw new Error(
-        `Slack: ${result.error || res.status}. Check your user token and users.profile:write scope.`,
+        `Slack: ${safeProviderCode(result.error) || res.status}. Check your user token and users.profile:write scope.`,
       );
     return result;
   }
@@ -462,14 +482,21 @@ export function createService({
             });
             const tokens = result.authed_user;
             if (
-              !tokens?.access_token ||
+              !validAccessToken(tokens?.access_token) ||
               tokens.token_type !== 'user' ||
-              !tokens.scope?.split(',').includes('users.profile:write')
+              !(
+                typeof tokens.scope === 'string' &&
+                tokens.scope.split(',').includes('users.profile:write')
+              )
             )
               throw new Error(
                 'Slack did not grant the users.profile:write user permission.',
               );
-            if (tokens.expires_in && !tokens.refresh_token)
+            if (
+              tokens.expires_in !== undefined &&
+              (!validLifetime(tokens.expires_in) ||
+                !validAccessToken(tokens.refresh_token))
+            )
               throw new Error(
                 'Slack did not return a refresh token. Reconnect Slack.',
               );
@@ -574,7 +601,12 @@ export function createService({
               },
             );
             const result = await response.json();
-            if (!response.ok || !result.access_token || !result.refresh_token)
+            if (
+              !response.ok ||
+              !validAccessToken(result.access_token) ||
+              !validAccessToken(result.refresh_token) ||
+              !validLifetime(result.expires_in)
+            )
               throw new Error('Token exchange failed');
             store.spotify.tokens = {
               access_token: result.access_token,
