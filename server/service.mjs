@@ -1,11 +1,5 @@
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
-import {
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  renameSync,
-  chmodSync,
-} from 'node:fs';
+import { createStateStore } from './state-store.mjs';
 import { resolve } from 'node:path';
 import {
   defaults,
@@ -42,31 +36,9 @@ export function createService({
   now = Date.now,
   poll = true,
 } = {}) {
-  mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-  chmodSync(dataDir, 0o700);
-  const file = resolve(dataDir, 'state.json');
-  let store = defaults();
-  try {
-    const saved = JSON.parse(readFileSync(file, 'utf8'));
-    store = {
-      ...store,
-      ...saved,
-      settings: { ...store.settings, ...saved.settings },
-    };
-    chmodSync(file, 0o600);
-  } catch (e) {
-    if (e.code !== 'ENOENT')
-      throw new Error(
-        'Cannot read .local/state.json. Restore a valid backup before starting.',
-      );
-  }
-  const save = () => {
-    writeFileSync(`${file}.tmp`, JSON.stringify(store, null, 2), {
-      mode: 0o600,
-    });
-    chmodSync(`${file}.tmp`, 0o600);
-    renameSync(`${file}.tmp`, file);
-  };
+  const stateStore = createStateStore(dataDir);
+  const store = stateStore.load(defaults());
+  const save = () => stateStore.save(store);
   const csrf = randomBytes(32).toString('hex');
   const oauth = new Map();
   const slackOAuth = new Map();
