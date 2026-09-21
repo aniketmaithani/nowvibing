@@ -1,0 +1,3 @@
+#!/bin/sh
+# Repository-local guard; no network access and no co-author trailers.
+exec node scripts/check-secrets.mjs

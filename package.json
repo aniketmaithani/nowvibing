@@ -9,10 +9,12 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "node server/start.mjs",
-    "lint": "oxlint app server tests lib vite.config.ts next.config.ts",
+    "lint": "oxlint app server tests scripts lib vite.config.ts next.config.ts",
     "format": "oxfmt",
     "test": "node --test tests/*.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:secrets && npm run build"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
