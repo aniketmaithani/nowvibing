@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     vinext(),
     {
-      name: 'spotmystatus-local-api',
+      name: 'nowvibing-local-api',
       configureServer(server) {
         const service = createService();
         server.middlewares.use((req, res, next) => {

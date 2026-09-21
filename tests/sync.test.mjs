@@ -62,7 +62,7 @@ test('status priority, expiration, truncation, playlist parsing, and private ses
 });
 
 async function fixture(t, { connected = true, expires = false } = {}) {
-  const dataDir = mkdtempSync(join(tmpdir(), 'spotmystatus-test-'));
+  const dataDir = mkdtempSync(join(tmpdir(), 'nowvibing-test-'));
   let clock = 1_800_000_000_000,
     mode = 'playing',
     spotifyCalls = 0,

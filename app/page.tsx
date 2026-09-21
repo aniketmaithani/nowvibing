@@ -242,12 +242,12 @@ export default function Home() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Link className="brand" href="/" aria-label="Spot my status home">
+        <Link className="brand" href="/" aria-label="NowVibing home">
           <span className="brand-icon">
             <AudioLines size={23} />
           </span>
           <span>
-            spot<span className="brand-muted">my</span>status
+            Now<span className="brand-muted">Vibing</span>
             <span className="brand-dot">.</span>
           </span>
         </Link>
@@ -694,7 +694,7 @@ export default function Home() {
             <CircleHelp size={14} /> How it works
           </button>
           <span className="footer-right">
-            SPOTMYSTATUS <span> / </span> LOCAL
+            NOWVIBING <span> / </span> LOCAL
           </span>
         </footer>
       </main>
@@ -1054,7 +1054,7 @@ export default function Home() {
                 Auto-sync pauses all Slack updates when off. Music statuses
                 expire after two minutes if the server stops. Manually set
                 statuses use the duration you choose. This is an independent
-                local app.
+                local app for your Spotify listening and Slack status.
               </p>
             </div>
           )}

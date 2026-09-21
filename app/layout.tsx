@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SpotMyStatus — Your local status studio',
+  title: 'NowVibing — Your local status studio',
   description:
     'Sync your Spotify listening and custom statuses to Slack from your own computer.',
 };

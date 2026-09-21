@@ -80,7 +80,7 @@ server.on('error', (error) => {
 });
 server.listen(3000, '127.0.0.1', () =>
   console.log(
-    'SpotMyStatus is running at http://127.0.0.1:3000\nKeep this terminal open to keep syncing.',
+    'NowVibing is running at http://127.0.0.1:3000\nKeep this terminal open to keep syncing.',
   ),
 );
 for (const signal of ['SIGINT', 'SIGTERM'])

@@ -1,4 +1,4 @@
-# SpotMyStatus · Local
+# NowVibing
 
 A local Spotify → Slack status app. Dark studio dashboard, current playback, live status preview, timed custom statuses, playlist rules, and a local activity log. Independent implementation; not affiliated with Spotify or Slack.
 
@@ -7,7 +7,7 @@ A local Spotify → Slack status app. Dark studio dashboard, current playback, l
 Use Node 22.13 or newer. This project includes `.nvmrc`:
 
 ```sh
-cd /Users/aniketmaithani/spotmy_status
+cd /path/to/your/checkout
 nvm use
 npm install
 npm run build
