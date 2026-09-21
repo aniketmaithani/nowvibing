@@ -1,5 +1,6 @@
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { createStateStore } from './state-store.mjs';
+import { readJsonBody, requestUrl } from './http.mjs';
 import { resolve } from 'node:path';
 import {
   defaults,
@@ -348,24 +349,17 @@ export function createService({
     });
     res.end();
   };
-  async function readBody(req) {
-    let body = '';
-    for await (const chunk of req) {
-      body += chunk;
-      if (body.length > 16000) throw new Error('Request too large.');
-    }
-    try {
-      return JSON.parse(body || '{}');
-    } catch {
-      throw new Error('Invalid JSON.');
-    }
-  }
   async function handle(
     req,
     res,
     next = () => json(res, 404, { error: 'Not found' }),
   ) {
-    const url = new URL(req.url, origin);
+    let url;
+    try {
+      url = requestUrl(req.url, origin);
+    } catch {
+      return json(res, 400, { error: 'Invalid request target.' });
+    }
     if (!url.pathname.startsWith('/api/')) return next();
     const slackAuthRoute = [
       '/api/auth/slack',
@@ -607,7 +601,7 @@ export function createService({
         return json(res, 405, { error: 'Method not allowed' });
       if (!equal(req.headers['x-csrf-token'], csrf))
         return json(res, 403, { error: 'Refresh the page and try again.' });
-      const body = await readBody(req);
+      const body = await readJsonBody(req);
       if (!body || typeof body !== 'object' || Array.isArray(body))
         throw new Error('Expected an object.');
       let nextRedirect;
@@ -749,7 +743,7 @@ export function createService({
         ...(nextRedirect ? { redirect: nextRedirect } : {}),
       });
     } catch (e) {
-      json(res, 400, { error: e.message || 'Request failed' });
+      json(res, e.status || 400, { error: e.message || 'Request failed' });
     }
   }
   return {

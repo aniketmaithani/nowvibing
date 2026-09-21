@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { resolve, extname, sep } from 'node:path';
+import { resolve } from 'node:path';
+import { createRequestHandler } from './http.mjs';
 import { createService } from './service.mjs';
 const root = ['out', 'dist/client']
   .map((p) => resolve(p))
@@ -11,64 +11,10 @@ if (!root) {
   process.exit(1);
 }
 const service = createService();
-const mime = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.svg': 'image/svg+xml',
-  '.woff2': 'font/woff2',
-  '.png': 'image/png',
-  '.ico': 'image/x-icon',
-  '.txt': 'text/plain',
-};
-const server = createServer((req, res) => {
-  const slackAuthRoute = [
-    '/api/auth/slack',
-    '/api/auth/slack/callback',
-  ].includes(new URL(req.url, 'http://127.0.0.1:3000').pathname);
-  if (
-    req.headers.host !== '127.0.0.1:3000' &&
-    !(req.headers.host === 'localhost:3000' && slackAuthRoute)
-  ) {
-    res.writeHead(403);
-    res.end('Open http://127.0.0.1:3000');
-    return;
-  }
-  void service.handle(req, res, async () => {
-    try {
-      if (!['GET', 'HEAD'].includes(req.method)) {
-        res.writeHead(405);
-        res.end();
-        return;
-      }
-      const pathname = decodeURIComponent(
-        new URL(req.url, 'http://127.0.0.1:3000').pathname,
-      );
-      const path = resolve(
-        root,
-        `.${pathname === '/' ? '/index.html' : pathname}`,
-      );
-      if (!path.startsWith(root + sep) || !(await stat(path)).isFile()) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
-      const content = await readFile(path);
-      res.writeHead(200, {
-        'Content-Type': mime[extname(path)] || 'application/octet-stream',
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'same-origin',
-        'Cache-Control':
-          extname(path) === '.html' ? 'no-cache' : 'public, max-age=3600',
-      });
-      res.end(req.method === 'HEAD' ? undefined : content);
-    } catch {
-      res.writeHead(404);
-      res.end('Not found');
-    }
-  });
-});
+const server = createServer(createRequestHandler({ service, root }));
+server.headersTimeout = 15000;
+server.requestTimeout = 15000;
+server.keepAliveTimeout = 5000;
 server.on('error', (error) => {
   console.error(
     error.code === 'EADDRINUSE'

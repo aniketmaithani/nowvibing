@@ -5,7 +5,12 @@ import { createService } from './server/service.mjs';
 
 export default defineConfig({
   css: { postcss: { plugins: [tailwindcss()] } },
-  server: { host: '127.0.0.1', port: 3000, strictPort: true },
+  server: {
+    host: '127.0.0.1',
+    port: 3000,
+    strictPort: true,
+    watch: { ignored: ['**/.local/**'] },
+  },
   plugins: [
     vinext(),
     {
