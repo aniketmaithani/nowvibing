@@ -2,6 +2,13 @@
 
 A local Spotify → Slack status app. Dark studio dashboard, current playback, live status preview, timed custom statuses, playlist rules, and a local activity log. Independent implementation; not affiliated with Spotify or Slack.
 
+## Documentation
+
+- [Architecture and module responsibilities](docs/ARCHITECTURE.md)
+- [Local API contract](docs/API.md)
+- [Security model, protections, and limitations](SECURITY.md)
+- [Development, tests, and atomic commit workflow](CONTRIBUTING.md)
+
 ## Run
 
 Use Node 22.13 or newer. This project includes `.nvmrc`:
@@ -9,14 +16,14 @@ Use Node 22.13 or newer. This project includes `.nvmrc`:
 ```sh
 cd /path/to/your/checkout
 nvm use
-npm install
+npm ci
 npm run build
 npm start
 ```
 
 Open **http://127.0.0.1:3000**. Use this address, not `localhost`: the app checks its host and Spotify requires a loopback IP redirect.
 
-Dependencies and a production build have already been prepared in this checkout, so `nvm use && npm start` is enough for the next run. Stop an existing instance with Ctrl+C first. Keep the server terminal open for automatic updates. Closing the browser is fine; sleeping or shutting down the computer stops sync. No cloud deployment or hosted backend is involved.
+After the first installation and build, `nvm use && npm start` is enough for the next run. Stop an existing instance with Ctrl+C first. Keep the server terminal open for automatic updates. Closing the browser is fine; sleeping or shutting down the computer stops sync. No cloud deployment or hosted backend is involved.
 
 For development, use `npm run dev` instead of `npm start` (same port). Run `npm run build` again after changing the app before using production mode.
 
@@ -77,17 +84,15 @@ A **PREVIEW** badge is a desired local status, not a claim that Slack has receiv
 
 ## Local data
 
-Settings, recent status changes, Spotify tokens, and the Slack token are stored in `.local/state.json`. That directory is gitignored, restricted to the owner (`0700`), and the file is owner-readable/writable (`0600`). Tokens are stored in plaintext on your disk, not in browser storage. Treat backups of this folder as sensitive. Disconnect from the app to remove its stored token; revoke the integration in Spotify/Slack to revoke access at the provider.
+Settings, recent status changes, Spotify tokens, and the Slack token are stored in `.local/state.json`. That directory is gitignored, restricted to the owner (`0700`), and the file is owner-readable/writable (`0600`). Storage rejects unsafe file links and uses exclusive temporary files for atomic replacement. Tokens are stored in plaintext on your disk, not in browser storage. Treat backups of this folder as sensitive. Disconnect from the app to remove its stored token; revoke the integration in Spotify/Slack to revoke access at the provider.
 
-The server binds only to `127.0.0.1`, validates the Host and Origin, and uses CSRF tokens for mutations. OAuth state is single-use, expires after ten minutes, and is bound to an HttpOnly browser cookie. Slack PKCE uses a one-time, one-minute launch ticket to establish the localhost cookie before authorization. This is a single-user local application, not a server for a shared network or public deployment.
+The server binds only to `127.0.0.1`, validates the Host and Origin, and uses CSRF tokens for mutations. OAuth state is single-use, expires after ten minutes, and is bound to an HttpOnly browser cookie. Slack PKCE uses a one-time, one-minute launch ticket to establish the localhost cookie before authorization. This is a single-user local application, not a server for a shared network or public deployment. Local processes can still operate the HTTP API; read [the security model](SECURITY.md) for the exact boundary.
 
 ## Verification
 
 ```sh
-npm test
-npm run typecheck
-npm run lint
-npm run build
+npm run check
+npm audit
 ```
 
 Tests use temporary directories and mocked Spotify/Slack responses: priority, playlist links, Unicode limits, private playback, expiration, deduplication, token refresh, quota backoff, pause/resume, persistence, credential redaction, CSRF/Host/Origin checks, and OAuth PKCE/cookie/state handling. They do not contact or change real accounts. Live Spotify-to-Slack sync requires connecting your own accounts and is not verified by these tests.
