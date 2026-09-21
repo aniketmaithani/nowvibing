@@ -1,0 +1,15 @@
+{
+  "display_information": {
+    "name": "SpotMyStatus Local",
+    "description": "Sync your Spotify listening and custom statuses from your computer.",
+    "background_color": "#1b2115"
+  },
+  "oauth_config": {
+    "scopes": { "user": ["users.profile:write"] }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
